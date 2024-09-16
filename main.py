@@ -5,6 +5,7 @@ def main(page: ft.Page):
     page.theme_mode = ft.ThemeMode.LIGHT
     player_1 = None
     player_2 = None
+    player_now = None
 
     def switch_player(item : str):
         name, icon = item.split()
@@ -16,19 +17,21 @@ def main(page: ft.Page):
             ]
         ))
         select_icon(icon)
-        page.update()
+        
         if len(players.controls) == 2:
             player_1 = players.controls.pop(0)
-            color = ft.colors.RED if user.value == player_1.controls[-1].value else ft.colors.GREY
-            player_1 = ft.Container(content=player_1, bgcolor=color)
+            player_now = player_1.controls[-1].value 
+            player_1 = ft.Container(content=player_1, bgcolor=ft.colors.RED, data=player_1.controls[-1].value)
 
             player_2 = players.controls.pop(0)
-            player_2 = ft.Container(content=player_2, bgcolor=color)
+            player_2 = ft.Container(content=player_2, bgcolor=ft.colors.GREY, data=player_2.controls[-1].value)
 
             players.controls.append(player_1)
             players.controls.append(player_2)
 
-            page.update()
+            page.pubsub.unsubscribe(switch_player)
+
+        page.update()
   
     page.pubsub.subscribe(switch_player)
 
