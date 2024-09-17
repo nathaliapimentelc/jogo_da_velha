@@ -1,5 +1,4 @@
 import flet as ft
-from play import Play
 
 def main(page: ft.Page):
     page.title = "DashDog"
@@ -8,13 +7,21 @@ def main(page: ft.Page):
     player_2 = None
     player_now = None
 
+    def switch(arg):
+        topic = arg.get('topic')
+        value = arg.get('value')
+        match topic:
+            case "select_player":
+                select_player(value)
+            case "switch_player":
+                switch_player(value)
+
     def select_player(player):
         player_now = player.data
         for play in players.controls:
             color = ft.colors.RED if play.data == player_now else ft.colors.TRANSPARENT
             play.border = ft.border.all(width=2, color=color)
         page.update()
-
 
 
     def switch_player(item : str):
@@ -28,40 +35,34 @@ def main(page: ft.Page):
         ))
         select_icon(icon)
         
-        page.update()
-        
         if len(players.controls) == 2:
             player_1 = players.controls.pop(0)
-            player_1 = ft.Container(content=player_1, data=player_1.controls[-1].value)
+            player_now = player_1.controls[-1].value 
+            player_1 = ft.Container(content=player_1, bgcolor=ft.colors.RED, data=player_1.controls[-1].value)
 
             player_2 = players.controls.pop(0)
-            player_2 = ft.Container(content=player_2, data=player_2.controls[-1].value)
+            player_2 = ft.Container(content=player_2, bgcolor=ft.colors.GREY, data=player_2.controls[-1].value)
 
-            
-            _play = Play(page, user.value, player_1, player_2)
-            #page.controls.clear()
-            page.controls.append(_play)
-            page.pubsub.unsubscribe()
-            #page.pubsub.subscribe(select_player)
-            #page.update()
-            #page.pubsub.send_all(player_1)
-            page.update()
-            
-            
+            players.controls.append(player_1)
+            players.controls.append(player_2)
+            value = {
+                'topic': 'select_player',
+                'value': player_1
+            }
+            page.pubsub.send_all(value)
 
-
-
-
-
-
+        page.update()
   
-    page.pubsub.subscribe(switch_player)
+    page.pubsub.subscribe(switch)
 
     def select_player_click(e):
         if user.value != '':
-            page.pubsub.send_all(f"{user.value} {e.control.icon}")
+            value = {
+                'topic': 'switch_player',
+                'value': f"{user.value} {e.control.icon}"
+            }
+            page.pubsub.send_all(value)
             page.controls.pop()
-            # page.pubsub.send_all_on_topic("teste", icon)
             page.update()
         else:
             page.open(
