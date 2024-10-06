@@ -1,4 +1,5 @@
 import flet as ft
+import time
 
 
 
@@ -16,6 +17,26 @@ def main(page: ft.Page):
     space = 10
     board_content = ft.Row(controls=[], spacing=space)
     
+    def check_winner(y):
+        global matriz
+        if y == matriz[0][0]:
+            if matriz[0][0] == matriz[0][1] == matriz[0][2]: return True
+            if matriz[0][0] == matriz[1][0] == matriz[2][0]: return True
+            if matriz[0][0] == matriz[1][1] == matriz[2][2]: return True
+        if y == matriz[1][1]:    
+            if matriz[0][1] == matriz[1][1] == matriz[2][1]: return True
+            if matriz[0][2] == matriz[1][1] == matriz[2][0]: return True
+            if matriz[1][0] == matriz[1][1] == matriz[1][2]: return True
+        if y == matriz[2][2]:
+            if matriz[2][0] == matriz[2][1] == matriz[2][2]: return True
+            if matriz[0][2] == matriz[1][2] == matriz[2][2]: return True
+        
+        for lin in range(3):
+            for col in range(3):
+                if matriz[lin][col] is None:
+                    return None
+        return False
+
     def get_block(size, data):
         def click_me(e):
             global player_now
@@ -24,6 +45,22 @@ def main(page: ft.Page):
                     'topic': 'select_block',
                     'value': e.control.data
                 }
+                page.pubsub.send_all(value)
+                time.sleep(1)
+                winner = check_winner('O' if player_now == _O_.name else 'X')
+                if winner:
+                    value = {
+                        'topic': 'winner_player',
+                        'value': player_now if winner else None
+                    }
+                else:    
+                    prox = _X_.name if player_now == _O_.name else _O_.name
+                    value = {
+                        'topic': 'select_player',
+                        'value': prox
+                    }
+
+
                 page.pubsub.send_all(value)
 
         return ft.Container(
@@ -69,19 +106,26 @@ def main(page: ft.Page):
         global player_now, matriz
         matriz[lin][col] = 'O' if player_now == _O_.name else 'X'
         
-        content = _O_ if player_now == _O_.name else _X_
-        container = page.controls[1].content.controls[lin].controls[col]
-        container.content = content
-        container.on_click = False
-        container.update()
+        color = _O_.color if player_now == _O_.name else _X_.color
+        icon_button = page.controls[1].content.controls[lin].controls[col].content
+        icon_button.icon = player_now
+        icon_button.icon_color = color
+        icon_button.on_click = None
+        icon_button.update()
 
-        prox = _X_.name if player_now == _O_.name else _O_.name
-        value = {
-            'topic': 'select_player',
-            'value': prox
-        }
-        page.pubsub.send_all(value)
-
+    
+    def winner_player(play_winner):
+        if play_winner:
+            txt = "Winner:"
+            for play in page.controls[0].content.controls:
+                if play.data == play_winner:
+                    play.border = ft.border.all(width=2, color=ft.colors.GREEN_ACCENT_700)
+        else:
+            for play in page.controls[0].content.controls:
+                play.border = ft.border.all(width=2, color=ft.colors.TRANSPARENT)
+            txt = "Velha"
+        page.insert(0, ft.Text(txt, size=50))
+        page.update()
 
      # ==================== Stage 3 ====================
 
@@ -191,6 +235,8 @@ def main(page: ft.Page):
             case "select_block":
                 lin, col = map(int, str(value).split())
                 select_block(lin, col)
+            case "winner_player":
+                winner_player(value)
 
     page.pubsub.subscribe(switch)
 
