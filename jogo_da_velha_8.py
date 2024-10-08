@@ -187,7 +187,7 @@ def main(page: ft.Page):
             for play in page.controls[0].content.controls:
                 play.border = ft.border.all(width=2, color=ft.colors.TRANSPARENT)
             txt = "Velha"
-        page.insert(0, ft.Text(txt, size=50))
+        page.insert(0, ft.Text(txt, size=50, data=(True if txt == "Velha" else False)))
         page.update()
 
      # ==================== Stage 3 ====================
@@ -211,12 +211,14 @@ def main(page: ft.Page):
         page.controls[0] = ft.Container(content=line, width=size + (space*2))
 
         board.visible = True
+        page.add(button_new_play)
         page.update()
         select_player(player_now)
 
         matriz = [[None, None, None],
                   [None, None, None],
                   [None, None, None]]
+        
 
      # ==================== Stage 2 ====================
 
@@ -300,11 +302,70 @@ def main(page: ft.Page):
                 select_block(lin, col)
             case "winner_player":
                 winner_player(value)
+            case "action_renew":
+                action_renew(value)
 
     page.pubsub.subscribe(switch)
 
+    def action_renew(finished):
+        global matriz
+        matriz = [[None, None, None],
+                  [None, None, None],
+                  [None, None, None]]
+        is_velha = False
+        if finished:
+            is_velha = page.controls[0].data
+            if isinstance(page.controls[0], ft.Text):
+                page.controls.pop(0)
+                time.sleep(0.1)
+            time.sleep(0.1)
+            if isinstance(page.controls[1], ft.Stack):
+                page.controls[1] = page.controls[1].controls[0]
+                time.sleep(0.1)
+        board = page.controls[1]
+        
+        for lin in range(3):
+            for col in range(3):
+                board.content.controls[lin].controls[col].content.icon_color=ft.colors.TRANSPARENT
+        page.controls[1] = board
+        page.update()
+        
+        if finished:
+            if is_velha:
+                prox = _X_.name if player_now == _O_.name else _O_.name
+                value = {
+                    'topic': 'select_player',
+                    'value': prox
+                }
+                page.pubsub.send_all(value)
+            else:
+                for play in page.controls[0].content.controls:
+                    if play.border.top.color != ft.colors.TRANSPARENT:
+                        color = ft.colors.RED
+                        play.border = ft.border.all(width=2, color=color)
+                        play.update()
+    
+    def renew(e):
+        def is_finished():
+            first = page.controls[0]
+            return isinstance(first, ft.Text)
+        finished = is_finished()
+        value = {
+            'topic': "action_renew",
+            'value': finished
+        }
+        page.pubsub.send_all(value)
+
     user = ft.TextField(icon=None, value=page.session_id, visible=False)
     players = ft.Row(alignment=ft.MainAxisAlignment.CENTER)
+    
+    button_new_play = ft.TextButton(
+        text="New Play",
+        icon=ft.icons.AUTORENEW,
+        icon_color=ft.colors.PURPLE,
+        on_click=renew
+    )
+    
     page.add(players, board, ft.Row([user, x_or_o], alignment=ft.MainAxisAlignment.CENTER))
 
 if __name__ == "__main__":
